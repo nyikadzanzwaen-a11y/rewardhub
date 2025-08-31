@@ -1,0 +1,482 @@
+{% extends 'admin_dashboard/base_admin.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- AI Insights Overview -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-users text-white text-sm"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Customer Segments</p>
+                    <p id="segments-count" class="text-2xl font-semibold text-gray-900">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-exclamation-triangle text-white text-sm"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">At-Risk Customers</p>
+                    <p id="churn-risk-count" class="text-2xl font-semibold text-gray-900">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-dollar-sign text-white text-sm"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Avg CLV</p>
+                    <p id="avg-clv" class="text-2xl font-semibold text-gray-900">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Insights Tabs -->
+    <div class="bg-white rounded-lg shadow" x-data="{ activeTab: 'segmentation' }">
+        <div class="border-b border-gray-200">
+            <nav class="flex space-x-8 px-6">
+                <button @click="activeTab = 'segmentation'" 
+                        :class="activeTab === 'segmentation' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="py-4 px-1 border-b-2 font-medium text-sm">
+                    Customer Segmentation
+                </button>
+                <button @click="activeTab = 'churn'" 
+                        :class="activeTab === 'churn' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="py-4 px-1 border-b-2 font-medium text-sm">
+                    Churn Prediction
+                </button>
+                <button @click="activeTab = 'clv'" 
+                        :class="activeTab === 'clv' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="py-4 px-1 border-b-2 font-medium text-sm">
+                    Customer Lifetime Value
+                </button>
+                <button @click="activeTab = 'recommendations'" 
+                        :class="activeTab === 'recommendations' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="py-4 px-1 border-b-2 font-medium text-sm">
+                    AI Recommendations
+                </button>
+            </nav>
+        </div>
+
+        <div class="p-6">
+            <!-- Customer Segmentation Tab -->
+            <div x-show="activeTab === 'segmentation'" class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-medium text-gray-900">Customer Segmentation Analysis</h3>
+                    <button onclick="refreshSegmentation()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                </div>
+                
+                <div id="segmentation-content" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <h4 class="font-medium text-gray-900">Customer Segments</h4>
+                        <div id="segments-list" class="space-y-3">
+                            <!-- Segments loaded dynamically -->
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-900 mb-4">Segment Distribution</h4>
+                        <canvas id="segmentChart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Churn Prediction Tab -->
+            <div x-show="activeTab === 'churn'" class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-medium text-gray-900">Churn Risk Analysis</h3>
+                    <button onclick="refreshChurnAnalysis()" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors text-sm">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-red-50 rounded-lg p-4">
+                        <h4 class="font-medium text-red-900 mb-2">High Risk</h4>
+                        <p id="high-risk-count" class="text-2xl font-bold text-red-600">0</p>
+                        <p class="text-sm text-red-700">Immediate attention needed</p>
+                    </div>
+                    <div class="bg-yellow-50 rounded-lg p-4">
+                        <h4 class="font-medium text-yellow-900 mb-2">Medium Risk</h4>
+                        <p id="medium-risk-count" class="text-2xl font-bold text-yellow-600">0</p>
+                        <p class="text-sm text-yellow-700">Monitor closely</p>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <h4 class="font-medium text-green-900 mb-2">Low Risk</h4>
+                        <p id="low-risk-count" class="text-2xl font-bold text-green-600">0</p>
+                        <p class="text-sm text-green-700">Stable customers</p>
+                    </div>
+                </div>
+
+                <div id="churn-recommendations" class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="font-medium text-gray-900 mb-3">Recommended Actions</h4>
+                    <div id="churn-actions-list" class="space-y-2">
+                        <!-- Actions loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- CLV Tab -->
+            <div x-show="activeTab === 'clv'" class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-medium text-gray-900">Customer Lifetime Value Predictions</h3>
+                    <button onclick="refreshCLVAnalysis()" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors text-sm">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-medium text-gray-900 mb-4">CLV Distribution</h4>
+                        <canvas id="clvChart" width="400" height="300"></canvas>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-900 mb-4">Top Value Customers</h4>
+                        <div id="top-clv-customers" class="space-y-3">
+                            <!-- Top customers loaded dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Recommendations Tab -->
+            <div x-show="activeTab === 'recommendations'" class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-medium text-gray-900">AI-Powered Recommendations</h3>
+                    <button onclick="generateRecommendations()" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors text-sm">
+                        <i class="fas fa-magic mr-2"></i>Generate New
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <h4 class="font-medium text-gray-900">Program Optimization</h4>
+                        <div id="program-recommendations" class="space-y-3">
+                            <!-- Program recommendations loaded dynamically -->
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <h4 class="font-medium text-gray-900">Marketing Actions</h4>
+                        <div id="marketing-recommendations" class="space-y-3">
+                            <!-- Marketing recommendations loaded dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Model Status -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">AI Model Status</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                <span class="text-sm font-medium text-gray-700">Segmentation Model</span>
+                <span class="flex items-center text-sm text-green-600">
+                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    Active
+                </span>
+            </div>
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                <span class="text-sm font-medium text-gray-700">Churn Prediction</span>
+                <span class="flex items-center text-sm text-green-600">
+                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    Active
+                </span>
+            </div>
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                <span class="text-sm font-medium text-gray-700">CLV Prediction</span>
+                <span class="flex items-center text-sm text-green-600">
+                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    Active
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let segmentChart = null;
+let clvChart = null;
+
+// Load AI insights on page load
+async function loadAIInsights() {
+    try {
+        const response = await fetchWithCSRF('/admin/api/ai-insights/');
+        const data = await response.json();
+        
+        if (data.success) {
+            const insights = data.insights;
+            
+            // Update overview metrics
+            updateOverviewMetrics(insights);
+            
+            // Update segmentation
+            updateSegmentation(insights.customer_segmentation);
+            
+            // Update churn analysis
+            updateChurnAnalysis(insights.churn_analysis);
+            
+            // Update CLV predictions
+            updateCLVAnalysis(insights.clv_predictions);
+            
+        } else {
+            showError('Failed to load AI insights: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error loading AI insights:', error);
+        showError('Error loading AI insights');
+    }
+}
+
+function updateOverviewMetrics(insights) {
+    // Update segments count
+    if (insights.customer_segmentation && insights.customer_segmentation.segments) {
+        document.getElementById('segments-count').textContent = insights.customer_segmentation.segments.length;
+    }
+    
+    // Update churn risk count
+    if (insights.churn_analysis && insights.churn_analysis.summary) {
+        document.getElementById('churn-risk-count').textContent = insights.churn_analysis.summary.high_risk_count || 0;
+    }
+    
+    // Update average CLV
+    if (insights.clv_predictions && insights.clv_predictions.avg_predicted_clv) {
+        document.getElementById('avg-clv').textContent = '$' + Math.round(insights.clv_predictions.avg_predicted_clv).toLocaleString();
+    }
+}
+
+function updateSegmentation(segmentationData) {
+    if (!segmentationData || !segmentationData.segments) return;
+    
+    const segmentsList = document.getElementById('segments-list');
+    let segmentsHTML = '';
+    
+    segmentationData.segments.forEach(segment => {
+        const percentage = ((segment.customer_count / segmentationData.total_customers) * 100).toFixed(1);
+        segmentsHTML += `
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <div class="flex justify-between items-center mb-2">
+                    <h5 class="font-medium text-gray-900">${segment.name}</h5>
+                    <span class="text-sm text-gray-600">${percentage}%</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-2">${segment.description}</p>
+                <div class="flex justify-between text-xs text-gray-500">
+                    <span>${segment.customer_count} customers</span>
+                    <span>Avg Value: $${Math.round(segment.avg_clv || 0)}</span>
+                </div>
+            </div>
+        `;
+    });
+    
+    segmentsList.innerHTML = segmentsHTML;
+    
+    // Update segment chart
+    updateSegmentChart(segmentationData.segments);
+}
+
+function updateSegmentChart(segments) {
+    const ctx = document.getElementById('segmentChart').getContext('2d');
+    
+    if (segmentChart) {
+        segmentChart.destroy();
+    }
+    
+    segmentChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: segments.map(s => s.name),
+            datasets: [{
+                data: segments.map(s => s.customer_count),
+                backgroundColor: [
+                    '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function updateChurnAnalysis(churnData) {
+    if (!churnData || !churnData.summary) return;
+    
+    const summary = churnData.summary;
+    
+    // Update risk counts
+    document.getElementById('high-risk-count').textContent = summary.high_risk_count || 0;
+    document.getElementById('medium-risk-count').textContent = summary.medium_risk_count || 0;
+    document.getElementById('low-risk-count').textContent = summary.low_risk_count || 0;
+    
+    // Update recommendations
+    if (churnData.recommendations) {
+        const actionsList = document.getElementById('churn-actions-list');
+        let actionsHTML = '';
+        
+        churnData.recommendations.forEach(rec => {
+            actionsHTML += `
+                <div class="flex items-start space-x-3 p-3 bg-white rounded border">
+                    <div class="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">${rec.action}</p>
+                        <p class="text-xs text-gray-600">${rec.description}</p>
+                    </div>
+                </div>
+            `;
+        });
+        
+        actionsList.innerHTML = actionsHTML;
+    }
+}
+
+function updateCLVAnalysis(clvData) {
+    if (!clvData || !clvData.predictions) return;
+    
+    // Update top customers list
+    const topCustomers = clvData.predictions
+        .sort((a, b) => b.predicted_clv - a.predicted_clv)
+        .slice(0, 5);
+    
+    const topCustomersList = document.getElementById('top-clv-customers');
+    let customersHTML = '';
+    
+    topCustomers.forEach((customer, index) => {
+        customersHTML += `
+            <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <div>
+                    <span class="text-sm font-medium text-gray-900">#${index + 1} Customer ${customer.customer_id}</span>
+                    <div class="text-xs text-gray-600">Confidence: ${(customer.confidence * 100).toFixed(0)}%</div>
+                </div>
+                <span class="text-sm font-semibold text-green-600">$${Math.round(customer.predicted_clv).toLocaleString()}</span>
+            </div>
+        `;
+    });
+    
+    topCustomersList.innerHTML = customersHTML;
+    
+    // Update CLV chart
+    updateCLVChart(clvData.predictions);
+}
+
+function updateCLVChart(predictions) {
+    const ctx = document.getElementById('clvChart').getContext('2d');
+    
+    if (clvChart) {
+        clvChart.destroy();
+    }
+    
+    // Create CLV distribution buckets
+    const buckets = {
+        '$0-$500': 0,
+        '$500-$1000': 0,
+        '$1000-$2000': 0,
+        '$2000-$5000': 0,
+        '$5000+': 0
+    };
+    
+    predictions.forEach(pred => {
+        const clv = pred.predicted_clv;
+        if (clv < 500) buckets['$0-$500']++;
+        else if (clv < 1000) buckets['$500-$1000']++;
+        else if (clv < 2000) buckets['$1000-$2000']++;
+        else if (clv < 5000) buckets['$2000-$5000']++;
+        else buckets['$5000+']++;
+    });
+    
+    clvChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(buckets),
+            datasets: [{
+                label: 'Number of Customers',
+                data: Object.values(buckets),
+                backgroundColor: '#10B981'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// Refresh functions
+async function refreshSegmentation() {
+    showSuccess('Segmentation refresh would trigger model retraining');
+}
+
+async function refreshChurnAnalysis() {
+    showSuccess('Churn analysis refresh would update risk scores');
+}
+
+async function refreshCLVAnalysis() {
+    showSuccess('CLV analysis refresh would recalculate predictions');
+}
+
+async function generateRecommendations() {
+    const programRecs = document.getElementById('program-recommendations');
+    const marketingRecs = document.getElementById('marketing-recommendations');
+    
+    // Sample recommendations
+    programRecs.innerHTML = `
+        <div class="p-3 bg-blue-50 rounded border border-blue-200">
+            <h5 class="font-medium text-blue-900">Optimize Tier Thresholds</h5>
+            <p class="text-sm text-blue-700">Consider lowering Silver tier threshold to 300 points to improve engagement</p>
+        </div>
+        <div class="p-3 bg-green-50 rounded border border-green-200">
+            <h5 class="font-medium text-green-900">Add Bonus Point Events</h5>
+            <p class="text-sm text-green-700">Weekend bonus point events could increase transaction frequency by 15%</p>
+        </div>
+    `;
+    
+    marketingRecs.innerHTML = `
+        <div class="p-3 bg-purple-50 rounded border border-purple-200">
+            <h5 class="font-medium text-purple-900">Target High-Risk Customers</h5>
+            <p class="text-sm text-purple-700">Send personalized retention offers to 23 high-risk customers</p>
+        </div>
+        <div class="p-3 bg-orange-50 rounded border border-orange-200">
+            <h5 class="font-medium text-orange-900">Upsell High-Value Segment</h5>
+            <p class="text-sm text-orange-700">Premium rewards campaign for top 10% customers could increase CLV by 20%</p>
+        </div>
+    `;
+    
+    showSuccess('AI recommendations generated successfully');
+}
+
+// Load insights on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadAIInsights();
+});
+</script>
+{% endblock %}

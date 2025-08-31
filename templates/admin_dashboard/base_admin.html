@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title }} - LoyaltyAI Admin{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    {% csrf_token %}
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex">
+        <!-- Sidebar -->
+        <div class="w-64 bg-gray-900 text-white flex-shrink-0">
+            <div class="p-6">
+                <h1 class="text-xl font-bold">LoyaltyAI Admin</h1>
+                <p class="text-gray-400 text-sm mt-1">Management Console</p>
+            </div>
+            
+            <nav class="mt-6">
+                <div class="px-6 py-2">
+                    <p class="text-gray-400 text-xs uppercase tracking-wider">Main</p>
+                </div>
+                <a href="{% url 'admin_dashboard:home' %}" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors {% if request.resolver_match.url_name == 'home' %}bg-gray-800 text-white{% endif %}">
+                    <i class="fas fa-tachometer-alt mr-3"></i>
+                    Dashboard
+                </a>
+                
+                <div class="px-6 py-2 mt-6">
+                    <p class="text-gray-400 text-xs uppercase tracking-wider">Program Management</p>
+                </div>
+                <a href="{% url 'admin_dashboard:program_config' %}" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors {% if request.resolver_match.url_name == 'program_config' %}bg-gray-800 text-white{% endif %}">
+                    <i class="fas fa-cogs mr-3"></i>
+                    Program Config
+                </a>
+                <a href="{% url 'admin_dashboard:customer_management' %}" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors {% if request.resolver_match.url_name == 'customer_management' %}bg-gray-800 text-white{% endif %}">
+                    <i class="fas fa-users mr-3"></i>
+                    Customers
+                </a>
+                <a href="{% url 'admin_dashboard:campaign_management' %}" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors {% if request.resolver_match.url_name == 'campaign_management' %}bg-gray-800 text-white{% endif %}">
+                    <i class="fas fa-bullhorn mr-3"></i>
+                    Campaigns
+                </a>
+                
+                <div class="px-6 py-2 mt-6">
+                    <p class="text-gray-400 text-xs uppercase tracking-wider">Analytics & AI</p>
+                </div>
+                <a href="{% url 'admin_dashboard:analytics_reporting' %}" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors {% if request.resolver_match.url_name == 'analytics_reporting' %}bg-gray-800 text-white{% endif %}">
+                    <i class="fas fa-chart-bar mr-3"></i>
+                    Analytics
+                </a>
+                <a href="{% url 'admin_dashboard:ai_insights' %}" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors {% if request.resolver_match.url_name == 'ai_insights' %}bg-gray-800 text-white{% endif %}">
+                    <i class="fas fa-brain mr-3"></i>
+                    AI Insights
+                </a>
+                
+                <div class="px-6 py-2 mt-6">
+                    <p class="text-gray-400 text-xs uppercase tracking-wider">System</p>
+                </div>
+                <a href="{% url 'admin_dashboard:security_audit' %}" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors {% if request.resolver_match.url_name == 'security_audit' %}bg-gray-800 text-white{% endif %}">
+                    <i class="fas fa-shield-alt mr-3"></i>
+                    Security
+                </a>
+                {% if user.is_superuser %}
+                <a href="{% url 'admin_dashboard:multitenant_management' %}" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors {% if request.resolver_match.url_name == 'multitenant_management' %}bg-gray-800 text-white{% endif %}">
+                    <i class="fas fa-building mr-3"></i>
+                    Multi-Tenant
+                </a>
+                {% endif %}
+            </nav>
+            
+            <!-- User info -->
+            <div class="absolute bottom-0 w-64 p-6 border-t border-gray-800">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                        <span class="text-white text-sm font-medium">{{ user.email.0|upper }}</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium">{{ user.email }}</p>
+                        <p class="text-xs text-gray-400">Admin</p>
+                    </div>
+                </div>
+                <a href="{% url 'logout' %}" class="mt-3 w-full bg-gray-800 text-white px-3 py-2 rounded text-sm hover:bg-gray-700 transition-colors block text-center">
+                    Logout
+                </a>
+            </div>
+        </div>
+        
+        <!-- Main content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Top bar -->
+            <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900">{{ page_title }}</h2>
+                        {% if tenant %}
+                        <p class="text-sm text-gray-600">Tenant: {{ tenant.name }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <!-- Notifications -->
+                        <button class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                            <i class="fas fa-bell"></i>
+                        </button>
+                        
+                        <!-- Quick actions -->
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-plus mr-2"></i>
+                                Quick Actions
+                            </button>
+                            
+                            <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
+                                <div class="py-1">
+                                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Add Customer</a>
+                                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Create Campaign</a>
+                                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Generate Report</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Page content -->
+            <main class="flex-1 overflow-y-auto p-6">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="mb-4 p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% elif message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% elif message.tags == 'warning' %}bg-yellow-50 text-yellow-800 border border-yellow-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    
+    <!-- Global JavaScript -->
+    <script>
+        // CSRF token setup for AJAX requests
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        // Global fetch wrapper with CSRF
+        function fetchWithCSRF(url, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
+            };
+            
+            return fetch(url, { ...defaultOptions, ...options });
+        }
+        
+        // Show loading state
+        function showLoading(element) {
+            element.innerHTML = '<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>';
+        }
+        
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-md shadow-lg z-50';
+            errorDiv.textContent = message;
+            document.body.appendChild(errorDiv);
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+        
+        // Show success message
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-md shadow-lg z-50';
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 5000);
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

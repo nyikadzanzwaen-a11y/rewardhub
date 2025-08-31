@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block title %}Business Setup - RewardHub{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Welcome to RewardHub, {{ tenant.business_name }}!</h1>
+            <p class="text-lg text-gray-600">Let's set up your business locations and get started</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Add Branch Form -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Add Your First Location</h2>
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    
+                    <div>
+                        <label for="{{ branch_form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Location Name *
+                        </label>
+                        {{ branch_form.name }}
+                    </div>
+
+                    <div>
+                        <label for="{{ branch_form.address.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Address *
+                        </label>
+                        {{ branch_form.address }}
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ branch_form.city.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                City *
+                            </label>
+                            {{ branch_form.city }}
+                        </div>
+                        <div>
+                            <label for="{{ branch_form.state.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                State/Province *
+                            </label>
+                            {{ branch_form.state }}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ branch_form.postal_code.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                Postal Code *
+                            </label>
+                            {{ branch_form.postal_code }}
+                        </div>
+                        <div>
+                            <label for="{{ branch_form.country.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                Country
+                            </label>
+                            {{ branch_form.country }}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ branch_form.phone.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                Phone Number
+                            </label>
+                            {{ branch_form.phone }}
+                        </div>
+                        <div>
+                            <label for="{{ branch_form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                Email
+                            </label>
+                            {{ branch_form.email }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="{{ branch_form.manager_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Manager Name
+                        </label>
+                        {{ branch_form.manager_name }}
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-md transition-colors">
+                            Add Location
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Current Branches -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Your Locations</h2>
+                
+                {% if branches %}
+                    <div class="space-y-4">
+                        {% for branch in branches %}
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h3 class="font-semibold text-gray-900">{{ branch.name }}</h3>
+                                        <p class="text-sm text-gray-600">{{ branch.address }}</p>
+                                        <p class="text-sm text-gray-600">{{ branch.city }}, {{ branch.state }} {{ branch.postal_code }}</p>
+                                        {% if branch.phone %}
+                                            <p class="text-sm text-gray-600">📞 {{ branch.phone }}</p>
+                                        {% endif %}
+                                        {% if branch.manager_name %}
+                                            <p class="text-sm text-gray-600">👤 {{ branch.manager_name }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if branch.active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                        {% if branch.active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-8">
+                        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No locations yet</h3>
+                        <p class="text-gray-600">Add your first business location to get started with RewardHub.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Next Steps -->
+        <div class="mt-8 bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Next Steps</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="text-center p-4 border border-gray-200 rounded-lg">
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="font-semibold text-gray-900 mb-2">Configure Loyalty Program</h3>
+                    <p class="text-sm text-gray-600">Set up your rewards, points system, and loyalty rules.</p>
+                </div>
+
+                <div class="text-center p-4 border border-gray-200 rounded-lg">
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="font-semibold text-gray-900 mb-2">Invite Team Members</h3>
+                    <p class="text-sm text-gray-600">Add staff members to manage your loyalty program.</p>
+                </div>
+
+                <div class="text-center p-4 border border-gray-200 rounded-lg">
+                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="font-semibold text-gray-900 mb-2">Launch & Analyze</h3>
+                    <p class="text-sm text-gray-600">Start enrolling customers and track your program's performance.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+            {% if branches %}
+                <a href="{% url 'tenant_dashboard' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-8 rounded-md text-center transition-colors">
+                    Go to Dashboard
+                </a>
+            {% endif %}
+            <a href="{% url 'manage_branches' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-8 rounded-md text-center transition-colors">
+                Manage All Locations
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

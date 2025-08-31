@@ -1,0 +1,206 @@
+{% extends 'tenants/loyalty/base.html' %}
+
+{% block loyalty_content %}
+<div class="md:flex md:items-center md:justify-between mb-6">
+    <div class="flex-1 min-w-0">
+        <h2 class="text-xl font-semibold text-gray-800">{{ form_title }}</h2>
+    </div>
+</div>
+
+<div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <form method="post" class="p-6">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-red-700">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="space-y-6">
+            <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                <!-- Name -->
+                <div class="sm:col-span-4">
+                    <label for="name" class="block text-sm font-medium text-gray-700">Rule Name</label>
+                    <div class="mt-1">
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.name.errors|join:", " }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Program -->
+                <div class="sm:col-span-4">
+                    <label for="program" class="block text-sm font-medium text-gray-700">Program</label>
+                    <div class="mt-1">
+                        {{ form.program }}
+                        {% if form.program.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.program.errors|join:", " }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Rule Type -->
+                <div class="sm:col-span-4">
+                    <label for="rule_type" class="block text-sm font-medium text-gray-700">Rule Type</label>
+                    <div class="mt-1">
+                        {{ form.rule_type }}
+                        {% if form.rule_type.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.rule_type.errors|join:", " }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Points -->
+                <div class="sm:col-span-2">
+                    <label for="points" class="block text-sm font-medium text-gray-700">Points</label>
+                    <div class="mt-1">
+                        {{ form.points }}
+                        {% if form.points.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.points.errors|join:", " }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Priority -->
+                <div class="sm:col-span-2">
+                    <label for="priority" class="block text-sm font-medium text-gray-700">Priority</label>
+                    <div class="mt-1">
+                        {{ form.priority }}
+                        {% if form.priority.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.priority.errors|join:", " }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Active Toggle -->
+                <div class="sm:col-span-2">
+                    <div class="flex items-center h-10">
+                        {{ form.active }}
+                        <label for="id_active" class="ml-2 block text-sm font-medium text-gray-700">Active</label>
+                        {% if form.active.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.active.errors|join:", " }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="sm:col-span-6">
+                    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <div class="mt-1">
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.description.errors|join:", " }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Date Range -->
+                <div class="sm:col-span-3">
+                    <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date</label>
+                    <div class="mt-1">
+                        {{ form.start_date }}
+                        {% if form.start_date.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.start_date.errors|join:", " }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="sm:col-span-3">
+                    <label for="end_date" class="block text-sm font-medium text-gray-700">End Date (optional)</label>
+                    <div class="mt-1">
+                        {{ form.end_date }}
+                        {% if form.end_date.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.end_date.errors|join:", " }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Conditions -->
+                <div class="sm:col-span-6">
+                    <div class="flex justify-between items-center">
+                        <label for="conditions" class="block text-sm font-medium text-gray-700">Conditions (JSON)</label>
+                        <span class="text-xs text-gray-500">Define when this rule applies</span>
+                    </div>
+                    <div class="mt-1">
+                        {{ form.conditions }}
+                        {% if form.conditions.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.conditions.errors|join:", " }}</p>
+                        {% endif %}
+                        <p class="mt-2 text-xs text-gray-500">Example: {"min_purchase_amount": 100, "category": "electronics"}</p>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="sm:col-span-6">
+                    <div class="flex justify-between items-center">
+                        <label for="actions" class="block text-sm font-medium text-gray-700">Actions (JSON)</label>
+                        <span class="text-xs text-gray-500">Define what happens when conditions are met</span>
+                    </div>
+                    <div class="mt-1">
+                        {{ form.actions }}
+                        {% if form.actions.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.actions.errors|join:", " }}</p>
+                        {% endif %}
+                        <p class="mt-2 text-xs text-gray-500">Example: {"award_points": 10, "notify_customer": true}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-5">
+                <div class="flex justify-end">
+                    <a href="{% url 'tenants:manage_loyalty_rules' %}" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Cancel
+                    </a>
+                    <button type="submit" class="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Save Rule
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% block extra_js %}
+<script>
+// Initialize date pickers
+document.addEventListener('DOMContentLoaded', function() {
+    // Format dates for datetime-local input
+    const formatDateForInput = (date) => {
+        if (!date) return '';
+        const d = new Date(date);
+        return d.toISOString().slice(0, 16);
+    };
+
+    // Set initial values for datetime-local inputs
+    const startDateInput = document.getElementById('id_start_date');
+    const endDateInput = document.getElementById('id_end_date');
+    
+    if (startDateInput && !startDateInput.value) {
+        startDateInput.value = formatDateForInput(new Date());
+    }
+    
+    if (endDateInput && !endDateInput.value) {
+        // Set default end date to 1 year from now
+        const nextYear = new Date();
+        nextYear.setFullYear(nextYear.getFullYear() + 1);
+        endDateInput.value = formatDateForInput(nextYear);
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

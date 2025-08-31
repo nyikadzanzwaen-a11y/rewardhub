@@ -1,0 +1,387 @@
+{% extends 'tenants/analytics/base.html' %}
+{% load humanize %}
+
+{% block title %}Points Analytics - {{ tenant.business_name }}{% endblock %}
+
+{% block analytics_content %}
+<div class="bg-white rounded-lg shadow p-6 mb-6">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">Points Analytics</h2>
+        <div class="flex items-center space-x-4">
+            <span class="text-sm text-gray-600">Date Range:</span>
+            <div class="flex space-x-2">
+                <a href="?date_range=7d" class="px-3 py-1 text-sm rounded-full {% if selected_date_range == '7d' %}bg-blue-100 text-blue-700 font-medium{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Last 7 days</a>
+                <a href="?date_range=30d" class="px-3 py-1 text-sm rounded-full {% if selected_date_range == '30d' or not selected_date_range %}bg-blue-100 text-blue-700 font-medium{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Last 30 days</a>
+                <a href="?date_range=90d" class="px-3 py-1 text-sm rounded-full {% if selected_date_range == '90d' %}bg-blue-100 text-blue-700 font-medium{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Last 90 days</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-medium text-gray-700">Total Points Earned</h3>
+                <div class="p-2 bg-green-100 rounded-lg">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ total_points_earned|intcomma }}</p>
+            <p class="text-sm text-gray-500 mt-2">
+                {{ start_date|date:"M j, Y" }} - {{ end_date|date:"M j, Y" }}
+            </p>
+        </div>
+
+        <div class="bg-white border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-medium text-gray-700">Total Points Redeemed</h3>
+                <div class="p-2 bg-purple-100 rounded-lg">
+                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ total_points_redeemed|intcomma }}</p>
+            <p class="text-sm text-gray-500 mt-2">
+                Net: {{ total_points_earned|sub:total_points_redeemed|intcomma }} points
+            </p>
+        </div>
+
+        <div class="bg-white border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-medium text-gray-700">Active Customers</h3>
+                <div class="p-2 bg-blue-100 rounded-lg">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ active_customers|intcomma }}</p>
+            <p class="text-sm text-gray-500 mt-2">
+                In the selected period
+            </p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Points Over Time Chart -->
+        <div class="bg-white p-6 rounded-lg border shadow-sm">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Points Activity Over Time</h3>
+            <div class="h-80">
+                <canvas id="pointsActivityChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Points by Type -->
+        <div class="bg-white p-6 rounded-lg border shadow-sm">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Points by Type</h3>
+            <div class="h-80">
+                <canvas id="pointsByTypeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Top Earners -->
+        <div class="bg-white p-6 rounded-lg border shadow-sm">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Top Points Earners</h3>
+                <span class="text-sm text-gray-500">All Time</span>
+            </div>
+            <div class="space-y-4">
+                {% for customer in top_earners %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 rounded-full bg-blue-100 text-blue-600">
+                            <span class="font-medium">{{ customer.customer.first_name|first|upper }}{{ customer.customer.last_name|first|upper }}</span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">
+                                {{ customer.customer.get_full_name }}
+                            </p>
+                            <p class="text-xs text-gray-500">
+                                {{ customer.tier.name|default:"No Tier" }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-medium text-gray-900">
+                            {{ customer.points_earned|intcomma }} pts
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            {{ customer.points_redeemed|intcomma }} redeemed
+                        </p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Points by Tier -->
+        <div class="bg-white p-6 rounded-lg border shadow-sm">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Points Distribution by Tier</h3>
+            <div class="h-80">
+                <canvas id="pointsByTierChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Points Activity Over Time Chart
+const activityCtx = document.getElementById('pointsActivityChart').getContext('2d');
+const dateSeries = JSON.parse('{{ date_series|escapejs }}');
+const earnedData = JSON.parse('{{ earned_data|escapejs }}');
+const redeemedData = JSON.parse('{{ redeemed_data|escapejs }}');
+
+new Chart(activityCtx, {
+    type: 'line',
+    data: {
+        labels: dateSeries,
+        datasets: [
+            {
+                label: 'Points Earned',
+                data: earnedData,
+                borderColor: 'rgb(16, 185, 129)',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.3,
+                fill: true,
+                borderWidth: 2
+            },
+            {
+                label: 'Points Redeemed',
+                data: redeemedData,
+                borderColor: 'rgb(139, 92, 246)',
+                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                tension: 0.3,
+                fill: true,
+                borderWidth: 2
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'top',
+                labels: {
+                    color: '#4B5563',
+                    usePointStyle: true,
+                    padding: 20
+                }
+            },
+            tooltip: {
+                backgroundColor: 'white',
+                titleColor: '#1F2937',
+                bodyColor: '#4B5563',
+                borderColor: '#E5E7EB',
+                borderWidth: 1,
+                padding: 12,
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                callbacks: {
+                    label: function(context) {
+                        return `${context.dataset.label}: ${context.raw.toLocaleString()} pts`;
+                    }
+                }
+            }
+        },
+        interaction: {
+            intersect: false,
+            mode: 'index'
+        },
+        scales: {
+            x: {
+                grid: {
+                    display: false
+                },
+                ticks: {
+                    color: '#6B7280',
+                    maxRotation: 45,
+                    minRotation: 45
+                }
+            },
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: '#F3F4F6'
+                },
+                ticks: {
+                    color: '#6B7280',
+                    callback: function(value) {
+                        return value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Points by Type Chart
+const typeCtx = document.getElementById('pointsByTypeChart').getContext('2d');
+const pointsByTypeData = {
+    labels: {{ points_by_type|map(attribute='transaction_type')|list|tojson|safe }},
+    datasets: [{
+        data: {{ points_by_type|map(attribute='total_points')|list|tojson|safe }},
+        backgroundColor: [
+            'rgba(59, 130, 246, 0.7)',
+            'rgba(16, 185, 129, 0.7)',
+            'rgba(245, 158, 11, 0.7)',
+            'rgba(139, 92, 246, 0.7)',
+            'rgba(236, 72, 153, 0.7)'
+        ],
+        borderColor: [
+            'rgb(59, 130, 246)',
+            'rgb(16, 185, 129)',
+            'rgb(245, 158, 11)',
+            'rgb(139, 92, 246)',
+            'rgb(236, 72, 153)'
+        ],
+        borderWidth: 1
+    }]
+};
+
+new Chart(typeCtx, {
+    type: 'doughnut',
+    data: pointsByTypeData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    color: '#4B5563',
+                    padding: 20,
+                    usePointStyle: true,
+                    pointStyle: 'circle'
+                }
+            },
+            tooltip: {
+                backgroundColor: 'white',
+                titleColor: '#1F2937',
+                bodyColor: '#4B5563',
+                borderColor: '#E5E7EB',
+                borderWidth: 1,
+                padding: 12,
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.raw || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = Math.round((value / total) * 100);
+                        return `${label}: ${value.toLocaleString()} pts (${percentage}%)`;
+                    }
+                }
+            }
+        },
+        cutout: '65%'
+    }
+});
+
+// Points by Tier Chart
+const tierCtx = document.getElementById('pointsByTierChart').getContext('2d');
+const pointsByTierData = {
+    labels: {{ points_by_tier|map(attribute='tier__name')|list|tojson|safe }},
+    datasets: [
+        {
+            label: 'Total Points',
+            data: {{ points_by_tier|map(attribute='total_points')|list|tojson|safe }},
+            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+            borderColor: 'rgb(59, 130, 246)',
+            borderWidth: 1,
+            yAxisID: 'y'
+        },
+        {
+            label: 'Customers',
+            data: {{ points_by_tier|map(attribute='customer_count')|list|tojson|safe }},
+            backgroundColor: 'rgba(16, 185, 129, 0.7)',
+            borderColor: 'rgb(16, 185, 129)',
+            borderWidth: 1,
+            type: 'line',
+            yAxisID: 'y1'
+        }
+    ]
+};
+
+new Chart(tierCtx, {
+    type: 'bar',
+    data: pointsByTierData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'top',
+                labels: {
+                    color: '#4B5563',
+                    usePointStyle: true,
+                    padding: 20
+                }
+            },
+            tooltip: {
+                backgroundColor: 'white',
+                titleColor: '#1F2937',
+                bodyColor: '#4B5563',
+                borderColor: '#E5E7EB',
+                borderWidth: 1,
+                padding: 12,
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            }
+        },
+        scales: {
+            x: {
+                grid: {
+                    display: false
+                },
+                ticks: {
+                    color: '#6B7280'
+                }
+            },
+            y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: {
+                    display: true,
+                    text: 'Total Points',
+                    color: '#4B5563'
+                },
+                grid: {
+                    color: '#F3F4F6'
+                },
+                ticks: {
+                    color: '#6B7280',
+                    callback: function(value) {
+                        return value.toLocaleString();
+                    }
+                }
+            },
+            y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: {
+                    display: true,
+                    text: 'Number of Customers',
+                    color: '#4B5563'
+                },
+                grid: {
+                    drawOnChartArea: false
+                },
+                ticks: {
+                    color: '#6B7280',
+                    precision: 0
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

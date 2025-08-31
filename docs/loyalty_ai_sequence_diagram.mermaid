@@ -1,0 +1,136 @@
+sequenceDiagram
+    participant C as Customer
+    participant UI as User Interface
+    participant API as API Layer
+    participant Auth as Authentication Service
+    participant LE as Loyalty Engine
+    participant CM as Customer Management
+    participant RM as Reward Management
+    participant LM as Location Management
+    participant AI as AI Service
+    participant DB as Database
+
+    %% User Authentication Flow
+    C->>UI: Login
+    UI->>API: POST /api/auth/login/
+    API->>Auth: authenticate(email, password)
+    Auth->>DB: query user credentials
+    DB-->>Auth: return user data
+    Auth-->>API: return JWT token
+    API-->>UI: return authenticated session
+    UI-->>C: Display dashboard
+
+    %% Customer Profile View
+    C->>UI: View profile
+    UI->>API: GET /api/profile/
+    API->>Auth: validate token
+    Auth-->>API: token valid
+    API->>CM: get_customer_profile(customer_id)
+    CM->>DB: query customer data
+    DB-->>CM: return customer data
+    CM-->>API: return profile data
+    API-->>UI: return profile JSON
+    UI-->>C: Display profile information
+
+    %% Location Check-in Flow
+    C->>UI: Check-in at location
+    UI->>API: POST /api/checkin/
+    API->>Auth: validate token
+    Auth-->>API: token valid
+    API->>LM: process_checkin(customer_id, location_data)
+    LM->>DB: verify location exists
+    DB-->>LM: location confirmed
+    LM->>DB: create check-in record
+    LM->>LE: evaluate_applicable_rules(customer_id, location_id)
+    LE->>DB: query active rules
+    DB-->>LE: return applicable rules
+    LE->>LE: process rules
+    LE->>DB: create point transaction
+    LE-->>LM: check-in processed, points awarded
+    LM-->>API: check-in successful response
+    API-->>UI: return success with points earned
+    UI-->>C: Display check-in confirmation
+
+    %% View Rewards Catalog
+    C->>UI: Browse rewards
+    UI->>API: GET /api/rewards/
+    API->>Auth: validate token
+    Auth-->>API: token valid
+    API->>RM: get_available_rewards(customer_id)
+    RM->>DB: query active rewards
+    DB-->>RM: return rewards data
+    RM->>AI: get_personalized_recommendations(customer_id)
+    AI->>DB: query customer preferences and history
+    DB-->>AI: return customer data
+    AI->>AI: generate recommendations
+    AI-->>RM: return recommended rewards
+    RM-->>API: return rewards with recommendations
+    API-->>UI: return rewards catalog JSON
+    UI-->>C: Display rewards catalog
+
+    %% Redeem Reward
+    C->>UI: Redeem reward
+    UI->>API: POST /api/rewards/{id}/redeem/
+    API->>Auth: validate token
+    Auth-->>API: token valid
+    API->>RM: process_redemption(customer_id, reward_id)
+    RM->>DB: check reward availability
+    DB-->>RM: reward available
+    RM->>CM: check_sufficient_points(customer_id, points_required)
+    CM->>DB: query customer points
+    DB-->>CM: return point balance
+    CM-->>RM: sufficient points confirmed
+    RM->>LE: create_redemption_transaction(customer_id, reward_id, points)
+    LE->>DB: deduct points from customer
+    LE->>DB: create redemption record
+    DB-->>LE: transaction complete
+    LE-->>RM: points deducted, redemption created
+    RM-->>API: redemption successful
+    API-->>UI: return redemption confirmation
+    UI-->>C: Display redemption success
+
+    %% Admin Dashboard: View Analytics
+    participant A as Admin
+    participant ADM as Admin Dashboard
+
+    A->>ADM: Access analytics
+    ADM->>API: GET /api/admin/analytics/overview/
+    API->>Auth: validate admin token
+    Auth-->>API: admin access confirmed
+    API->>DB: query program metrics
+    DB-->>API: return metrics data
+    API->>AI: generate_insights(metrics_data)
+    AI->>AI: process data
+    AI-->>API: return insights
+    API-->>ADM: return analytics with insights
+    ADM-->>A: Display analytics dashboard
+
+    %% Admin: Configure Loyalty Rules
+    A->>ADM: Configure loyalty rule
+    ADM->>API: POST /api/admin/rules/
+    API->>Auth: validate admin token
+    Auth-->>API: admin access confirmed
+    API->>LE: create_rule(rule_data)
+    LE->>DB: store rule configuration
+    DB-->>LE: rule created
+    LE-->>API: rule creation successful
+    API-->>ADM: return success response
+    ADM-->>A: Display confirmation
+
+    %% AI Churn Prediction
+    note over API,AI: Background process runs daily
+    API->>AI: predict_customer_churn()
+    AI->>DB: query customer activity data
+    DB-->>AI: return customer data
+    AI->>AI: analyze churn risk
+    AI->>DB: store churn predictions
+    
+    %% Admin: View Churn Predictions
+    A->>ADM: View churn risk report
+    ADM->>API: GET /api/admin/insights/churn/
+    API->>Auth: validate admin token
+    Auth-->>API: admin access confirmed
+    API->>DB: query churn predictions
+    DB-->>API: return churn data
+    API-->>ADM: return churn insights
+    ADM-->>A: Display churn report

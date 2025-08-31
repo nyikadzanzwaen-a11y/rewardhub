@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+
+{% block title %}Transaction History - LoyaltyAI{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Transaction History</h1>
+    <div class="flex items-center space-x-4">
+        <span class="text-sm text-gray-600">Current Balance:</span>
+        <span class="text-lg font-bold text-blue-600">{{ points_balance }} pts</span>
+    </div>
+</div>
+
+<!-- Filter Options -->
+<div class="bg-white rounded-lg shadow p-4 mb-6">
+    <div class="flex flex-wrap items-center gap-4">
+        <div>
+            <label class="text-sm font-medium text-gray-700">Filter by Type:</label>
+            <select id="type-filter" class="ml-2 border border-gray-300 rounded px-3 py-1">
+                <option value="">All Transactions</option>
+                <option value="earn">Points Earned</option>
+                <option value="redeem">Points Redeemed</option>
+                <option value="adjust">Adjustments</option>
+            </select>
+        </div>
+        <div>
+            <label class="text-sm font-medium text-gray-700">Date Range:</label>
+            <select id="date-filter" class="ml-2 border border-gray-300 rounded px-3 py-1">
+                <option value="">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+                <option value="quarter">Last 3 Months</option>
+            </select>
+        </div>
+        <button onclick="applyFilters()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+            Apply Filters
+        </button>
+        <button onclick="exportHistory()" class="border border-blue-500 text-blue-500 px-4 py-2 rounded hover:bg-blue-50">
+            Export CSV
+        </button>
+    </div>
+</div>
+
+<!-- Transaction List -->
+<div class="bg-white rounded-lg shadow">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">Recent Transactions</h2>
+    </div>
+    
+    <div class="divide-y divide-gray-200" id="transactions-list">
+        {% for transaction in transactions %}
+        <div class="transaction-item p-6 hover:bg-gray-50" 
+             data-type="{{ transaction.transaction_type }}" 
+             data-date="{{ transaction.timestamp|date:'Y-m-d' }}">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full {% if transaction.transaction_type == 'earn' %}bg-green-100 text-green-600{% elif transaction.transaction_type == 'redeem' %}bg-red-100 text-red-600{% else %}bg-blue-100 text-blue-600{% endif %}">
+                        {% if transaction.transaction_type == 'earn' %}
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                        {% elif transaction.transaction_type == 'redeem' %}
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+                            </svg>
+                        {% else %}
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="ml-4">
+                        <h3 class="text-sm font-medium text-gray-900">{{ transaction.description }}</h3>
+                        <div class="flex items-center space-x-4 mt-1">
+                            <p class="text-xs text-gray-500">
+                                {{ transaction.timestamp|date:"M d, Y H:i" }}
+                            </p>
+                            {% if transaction.location %}
+                            <p class="text-xs text-gray-500">
+                                📍 {{ transaction.location.name }}
+                            </p>
+                            {% endif %}
+                            {% if transaction.reference_id %}
+                            <p class="text-xs text-gray-400">
+                                ID: {{ transaction.reference_id|truncatechars:8 }}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-right">
+                    <span class="text-lg font-semibold {% if transaction.transaction_type == 'earn' %}text-green-600{% elif transaction.transaction_type == 'redeem' %}text-red-600{% else %}text-blue-600{% endif %}">
+                        {% if transaction.transaction_type == 'earn' %}+{% elif transaction.transaction_type == 'redeem' %}-{% endif %}{{ transaction.points }} pts
+                    </span>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Balance: {{ transaction.balance_after }} pts
+                    </p>
+                </div>
+            </div>
+            
+            {% if transaction.metadata %}
+            <div class="mt-3 pt-3 border-t border-gray-100">
+                <details class="text-xs text-gray-600">
+                    <summary class="cursor-pointer hover:text-gray-800">Transaction Details</summary>
+                    <div class="mt-2 pl-4">
+                        {% for key, value in transaction.metadata.items %}
+                        <p><strong>{{ key|title }}:</strong> {{ value }}</p>
+                        {% endfor %}
+                    </div>
+                </details>
+            </div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="p-12 text-center">
+            <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No Transactions Yet</h3>
+            <p class="text-gray-500">Start earning points by checking in at locations or making purchases!</p>
+            <a href="{% url 'customer_dashboard' %}" class="mt-4 inline-block bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
+                Go to Dashboard
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Load More Button -->
+    {% if transactions|length >= 50 %}
+    <div class="px-6 py-4 border-t border-gray-200 text-center">
+        <button onclick="loadMoreTransactions()" class="text-blue-600 hover:text-blue-800 font-medium">
+            Load More Transactions
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Summary Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-sm font-medium text-gray-500 mb-2">Points Earned This Month</h3>
+        <p class="text-2xl font-bold text-green-600" id="monthly-earned">-</p>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-sm font-medium text-gray-500 mb-2">Points Redeemed This Month</h3>
+        <p class="text-2xl font-bold text-red-600" id="monthly-redeemed">-</p>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-sm font-medium text-gray-500 mb-2">Net Change This Month</h3>
+        <p class="text-2xl font-bold text-blue-600" id="monthly-net">-</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function applyFilters() {
+    const typeFilter = document.getElementById('type-filter').value;
+    const dateFilter = document.getElementById('date-filter').value;
+    const items = document.querySelectorAll('.transaction-item');
+    
+    items.forEach(item => {
+        let show = true;
+        
+        // Type filter
+        if (typeFilter && item.dataset.type !== typeFilter) {
+            show = false;
+        }
+        
+        // Date filter
+        if (dateFilter && show) {
+            const itemDate = new Date(item.dataset.date);
+            const now = new Date();
+            
+            switch(dateFilter) {
+                case 'today':
+                    show = itemDate.toDateString() === now.toDateString();
+                    break;
+                case 'week':
+                    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    show = itemDate >= weekAgo;
+                    break;
+                case 'month':
+                    const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+                    show = itemDate >= monthAgo;
+                    break;
+                case 'quarter':
+                    const quarterAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+                    show = itemDate >= quarterAgo;
+                    break;
+            }
+        }
+        
+        item.style.display = show ? 'block' : 'none';
+    });
+    
+    // Update summary stats based on visible items
+    updateSummaryStats();
+}
+
+function updateSummaryStats() {
+    const visibleItems = Array.from(document.querySelectorAll('.transaction-item'))
+        .filter(item => item.style.display !== 'none');
+    
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    let monthlyEarned = 0;
+    let monthlyRedeemed = 0;
+    
+    visibleItems.forEach(item => {
+        const itemDate = new Date(item.dataset.date);
+        if (itemDate >= monthStart) {
+            const pointsText = item.querySelector('.text-lg').textContent;
+            const points = parseInt(pointsText.replace(/[^\d]/g, ''));
+            
+            if (item.dataset.type === 'earn') {
+                monthlyEarned += points;
+            } else if (item.dataset.type === 'redeem') {
+                monthlyRedeemed += points;
+            }
+        }
+    });
+    
+    document.getElementById('monthly-earned').textContent = monthlyEarned;
+    document.getElementById('monthly-redeemed').textContent = monthlyRedeemed;
+    document.getElementById('monthly-net').textContent = monthlyEarned - monthlyRedeemed;
+}
+
+function exportHistory() {
+    const visibleItems = Array.from(document.querySelectorAll('.transaction-item'))
+        .filter(item => item.style.display !== 'none');
+    
+    let csv = 'Date,Type,Description,Points,Balance After\n';
+    
+    visibleItems.forEach(item => {
+        const date = item.dataset.date;
+        const type = item.dataset.type;
+        const description = item.querySelector('h3').textContent;
+        const pointsText = item.querySelector('.text-lg').textContent;
+        const points = pointsText.replace(/[^\d\-]/g, '');
+        const balanceText = item.querySelector('.text-xs').textContent;
+        const balance = balanceText.replace(/[^\d]/g, '');
+        
+        csv += `${date},${type},"${description}",${points},${balance}\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'transaction_history.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+async function loadMoreTransactions() {
+    // This would typically make an AJAX request to load more transactions
+    // For now, we'll just show a message
+    alert('Load more functionality would be implemented with pagination API');
+}
+
+// Initialize summary stats on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateSummaryStats();
+});
+</script>
+{% endblock %}

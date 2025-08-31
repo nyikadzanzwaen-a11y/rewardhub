@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+
+{% block title %}Rewards Catalog - LoyaltyAI{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Rewards Catalog</h1>
+    <div class="flex items-center space-x-4">
+        <span class="text-sm text-gray-600">Your Balance:</span>
+        <span class="text-lg font-bold text-blue-600" id="current-balance">{{ points_balance }} pts</span>
+    </div>
+</div>
+
+<!-- Filter and Sort -->
+<div class="bg-white rounded-lg shadow p-4 mb-6">
+    <div class="flex flex-wrap items-center gap-4">
+        <div>
+            <label class="text-sm font-medium text-gray-700">Filter by Points:</label>
+            <select id="points-filter" class="ml-2 border border-gray-300 rounded px-3 py-1">
+                <option value="">All Rewards</option>
+                <option value="0-100">0 - 100 points</option>
+                <option value="101-500">101 - 500 points</option>
+                <option value="501-1000">501 - 1000 points</option>
+                <option value="1000+">1000+ points</option>
+            </select>
+        </div>
+        <div>
+            <label class="text-sm font-medium text-gray-700">Sort by:</label>
+            <select id="sort-filter" class="ml-2 border border-gray-300 rounded px-3 py-1">
+                <option value="points-asc">Points (Low to High)</option>
+                <option value="points-desc">Points (High to Low)</option>
+                <option value="name">Name (A-Z)</option>
+            </select>
+        </div>
+        <button onclick="applyFilters()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+            Apply Filters
+        </button>
+    </div>
+</div>
+
+<!-- Rewards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="rewards-grid">
+    {% for reward in rewards %}
+    <div class="reward-card bg-white rounded-lg shadow-lg overflow-hidden" data-points="{{ reward.point_cost }}" data-name="{{ reward.name }}">
+        {% if reward.image %}
+        <img src="{{ reward.image.url }}" alt="{{ reward.name }}" class="w-full h-48 object-cover">
+        {% else %}
+        <div class="w-full h-48 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+            <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+            </svg>
+        </div>
+        {% endif %}
+        
+        <div class="p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ reward.name }}</h3>
+            <p class="text-gray-600 text-sm mb-4">{{ reward.description }}</p>
+            
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-2xl font-bold text-blue-600">{{ reward.point_cost }} pts</span>
+                {% if reward.quantity_available %}
+                <span class="text-xs text-gray-500">{{ reward.quantity_available }} left</span>
+                {% endif %}
+            </div>
+            
+            <div class="space-y-2">
+                {% if reward.is_available and reward.point_cost <= points_balance %}
+                <button onclick="redeemReward('{{ reward.id }}', '{{ reward.name }}', {{ reward.point_cost }})" 
+                        class="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition-colors">
+                    Redeem Now
+                </button>
+                {% elif reward.point_cost > points_balance %}
+                <button disabled class="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded cursor-not-allowed">
+                    Need {{ reward.point_cost|sub:points_balance }} more points
+                </button>
+                {% else %}
+                <button disabled class="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded cursor-not-allowed">
+                    Currently Unavailable
+                </button>
+                {% endif %}
+                
+                <button onclick="viewRewardDetails('{{ reward.id }}')" 
+                        class="w-full border border-blue-500 text-blue-500 py-2 px-4 rounded hover:bg-blue-50 transition-colors">
+                    View Details
+                </button>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-span-full text-center py-12">
+        <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+        </svg>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No Rewards Available</h3>
+        <p class="text-gray-500">Check back later for new rewards!</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Redemption Modal -->
+<div id="redemption-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Confirm Redemption</h3>
+        <div id="redemption-content">
+            <!-- Content will be populated by JavaScript -->
+        </div>
+        <div class="flex space-x-3 mt-6">
+            <button onclick="confirmRedemption()" class="flex-1 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600">
+                Confirm
+            </button>
+            <button onclick="closeRedemptionModal()" class="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-50">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Reward Details Modal -->
+<div id="details-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Reward Details</h3>
+            <button onclick="closeDetailsModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div id="details-content">
+            <!-- Content will be populated by JavaScript -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentRedemption = null;
+
+function applyFilters() {
+    const pointsFilter = document.getElementById('points-filter').value;
+    const sortFilter = document.getElementById('sort-filter').value;
+    const cards = Array.from(document.querySelectorAll('.reward-card'));
+    
+    // Filter cards
+    cards.forEach(card => {
+        const points = parseInt(card.dataset.points);
+        let show = true;
+        
+        if (pointsFilter) {
+            switch(pointsFilter) {
+                case '0-100':
+                    show = points >= 0 && points <= 100;
+                    break;
+                case '101-500':
+                    show = points >= 101 && points <= 500;
+                    break;
+                case '501-1000':
+                    show = points >= 501 && points <= 1000;
+                    break;
+                case '1000+':
+                    show = points > 1000;
+                    break;
+            }
+        }
+        
+        card.style.display = show ? 'block' : 'none';
+    });
+    
+    // Sort visible cards
+    const visibleCards = cards.filter(card => card.style.display !== 'none');
+    const grid = document.getElementById('rewards-grid');
+    
+    visibleCards.sort((a, b) => {
+        switch(sortFilter) {
+            case 'points-asc':
+                return parseInt(a.dataset.points) - parseInt(b.dataset.points);
+            case 'points-desc':
+                return parseInt(b.dataset.points) - parseInt(a.dataset.points);
+            case 'name':
+                return a.dataset.name.localeCompare(b.dataset.name);
+            default:
+                return 0;
+        }
+    });
+    
+    // Re-append sorted cards
+    visibleCards.forEach(card => grid.appendChild(card));
+}
+
+function redeemReward(rewardId, rewardName, pointCost) {
+    currentRedemption = { rewardId, rewardName, pointCost };
+    
+    const content = document.getElementById('redemption-content');
+    content.innerHTML = `
+        <p class="text-gray-700 mb-4">
+            Are you sure you want to redeem <strong>${rewardName}</strong> for <strong>${pointCost} points</strong>?
+        </p>
+        <div class="bg-yellow-50 border border-yellow-200 rounded p-3">
+            <p class="text-sm text-yellow-800">
+                <strong>Note:</strong> This action cannot be undone. Points will be deducted from your account immediately.
+            </p>
+        </div>
+    `;
+    
+    document.getElementById('redemption-modal').classList.remove('hidden');
+    document.getElementById('redemption-modal').classList.add('flex');
+}
+
+async function confirmRedemption() {
+    if (!currentRedemption) return;
+    
+    try {
+        const response = await fetch('/api/rewards/redeem/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                reward_id: currentRedemption.rewardId
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            alert(`Redemption successful! Your new balance is ${parseInt(document.getElementById('current-balance').textContent) - currentRedemption.pointCost} points.`);
+            location.reload();
+        } else {
+            const error = await response.json();
+            alert(`Redemption failed: ${error.error || 'Unknown error'}`);
+        }
+    } catch (error) {
+        console.error('Redemption error:', error);
+        alert('Redemption failed. Please try again.');
+    }
+    
+    closeRedemptionModal();
+}
+
+function closeRedemptionModal() {
+    document.getElementById('redemption-modal').classList.add('hidden');
+    document.getElementById('redemption-modal').classList.remove('flex');
+    currentRedemption = null;
+}
+
+async function viewRewardDetails(rewardId) {
+    try {
+        const response = await fetch(`/api/rewards/${rewardId}/`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const reward = await response.json();
+            displayRewardDetails(reward);
+        }
+    } catch (error) {
+        console.error('Error fetching reward details:', error);
+    }
+}
+
+function displayRewardDetails(reward) {
+    const content = document.getElementById('details-content');
+    content.innerHTML = `
+        <div class="space-y-4">
+            <div>
+                <h4 class="font-medium text-gray-900">${reward.name}</h4>
+                <p class="text-sm text-gray-600 mt-1">${reward.description}</p>
+            </div>
+            
+            <div class="border-t pt-4">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-500">Point Cost:</span>
+                        <span class="font-medium text-blue-600 ml-2">${reward.point_cost} pts</span>
+                    </div>
+                    ${reward.quantity_available ? `
+                    <div>
+                        <span class="text-gray-500">Available:</span>
+                        <span class="font-medium ml-2">${reward.quantity_available}</span>
+                    </div>
+                    ` : ''}
+                    <div>
+                        <span class="text-gray-500">Status:</span>
+                        <span class="font-medium ml-2 ${reward.is_available ? 'text-green-600' : 'text-red-600'}">
+                            ${reward.is_available ? 'Available' : 'Unavailable'}
+                        </span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Program:</span>
+                        <span class="font-medium ml-2">${reward.program_name}</span>
+                    </div>
+                </div>
+            </div>
+            
+            ${reward.start_date || reward.end_date ? `
+            <div class="border-t pt-4">
+                <h5 class="font-medium text-gray-900 mb-2">Validity Period</h5>
+                <div class="text-sm text-gray-600">
+                    ${reward.start_date ? `From: ${new Date(reward.start_date).toLocaleDateString()}` : ''}
+                    ${reward.end_date ? `<br>Until: ${new Date(reward.end_date).toLocaleDateString()}` : ''}
+                </div>
+            </div>
+            ` : ''}
+        </div>
+    `;
+    
+    document.getElementById('details-modal').classList.remove('hidden');
+    document.getElementById('details-modal').classList.add('flex');
+}
+
+function closeDetailsModal() {
+    document.getElementById('details-modal').classList.add('hidden');
+    document.getElementById('details-modal').classList.remove('flex');
+}
+
+// Close modals when clicking outside
+document.getElementById('redemption-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeRedemptionModal();
+});
+
+document.getElementById('details-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeDetailsModal();
+});
+</script>
+{% endblock %}

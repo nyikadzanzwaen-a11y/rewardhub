@@ -1,0 +1,263 @@
+classDiagram
+    class User {
+        +UUID id
+        +String email
+        +String password
+        +String first_name
+        +String last_name
+        +Boolean is_active
+        +Boolean is_staff
+        +DateTime date_joined
+        +DateTime last_login
+        +create_user()
+        +check_password()
+    }
+    
+    class Role {
+        +UUID id
+        +String name
+        +ManyToMany permissions
+        +add_permission(permission)
+        +remove_permission(permission)
+    }
+    
+    class Tenant {
+        +UUID id
+        +String name
+        +String subdomain
+        +Boolean active
+        +DateTime created_at
+        +DateTime updated_at
+        +get_absolute_url()
+        +activate()
+        +deactivate()
+    }
+    
+    class TenantSettings {
+        +OneToOne tenant
+        +JSONField branding_settings
+        +JSONField loyalty_settings
+        +JSONField security_settings
+        +JSONField notification_settings
+        +update_settings(key, value)
+    }
+    
+    class LoyaltyProgram {
+        +UUID id
+        +ForeignKey tenant
+        +String name
+        +Text description
+        +Boolean active
+        +DateTime created_at
+        +DateTime updated_at
+        +activate()
+        +deactivate()
+        +get_active_rules()
+    }
+    
+    class Tier {
+        +UUID id
+        +ForeignKey program
+        +String name
+        +Integer points_threshold
+        +JSONField benefits
+        +ImageField icon
+        +DateTime created_at
+        +DateTime updated_at
+        +get_customers()
+    }
+    
+    class Rule {
+        +UUID id
+        +ForeignKey program
+        +String name
+        +Text description
+        +String rule_type
+        +JSONField conditions
+        +JSONField actions
+        +Integer points
+        +Boolean location_based
+        +DateTime start_date
+        +DateTime end_date
+        +Boolean active
+        +Integer priority
+        +DateTime created_at
+        +DateTime updated_at
+        +is_applicable(customer, action, location)
+        +execute_action(customer, action, location)
+    }
+    
+    class Customer {
+        +UUID id
+        +ForeignKey tenant
+        +OneToOne user
+        +JSONField profile_data
+        +JSONField preferences
+        +ArrayField segment_tags
+        +JSONField ai_insights
+        +DateTime created_at
+        +DateTime updated_at
+        +get_current_tier()
+        +get_segment()
+        +get_recent_transactions(limit)
+        +get_recent_redemptions(limit)
+        +get_current_location()
+    }
+    
+    class LoyaltyAccount {
+        +UUID id
+        +OneToOne customer
+        +ForeignKey program
+        +Integer points_balance
+        +Integer lifetime_points
+        +ForeignKey tier
+        +DateTime last_activity
+        +DateTime created_at
+        +DateTime updated_at
+        +add_points(points, description, location, rule)
+        +deduct_points(points, description, location)
+        +check_tier_eligibility()
+        +upgrade_tier()
+    }
+    
+    class Transaction {
+        +UUID id
+        +ForeignKey loyalty_account
+        +Integer points
+        +String transaction_type
+        +Text description
+        +String reference
+        +ForeignKey location
+        +ForeignKey rule_applied
+        +DateTime timestamp
+        +String status
+        +verify()
+        +cancel()
+        +get_location_data()
+    }
+    
+    class Location {
+        +UUID id
+        +ForeignKey tenant
+        +String name
+        +Text address
+        +PointField coordinates
+        +PolygonField geofence
+        +Float radius
+        +DateTime created_at
+        +DateTime updated_at
+        +is_point_within(lat, lng)
+        +get_nearby_locations(lat, lng, distance)
+    }
+    
+    class CheckIn {
+        +UUID id
+        +ForeignKey customer
+        +ForeignKey location
+        +PointField coordinates
+        +DateTime timestamp
+        +Boolean verified
+        +JSONField device_info
+        +verify()
+        +process_rules()
+    }
+    
+    class Reward {
+        +UUID id
+        +ForeignKey program
+        +String name
+        +Text description
+        +ImageField image
+        +Integer point_cost
+        +Integer quantity_available
+        +DateTime start_date
+        +DateTime end_date
+        +Boolean active
+        +DateTime created_at
+        +DateTime updated_at
+        +is_available()
+        +reduce_inventory()
+        +is_eligible_for_customer(customer)
+    }
+    
+    class Redemption {
+        +UUID id
+        +ForeignKey customer
+        +ForeignKey reward
+        +Integer points_used
+        +DateTime redemption_date
+        +String status
+        +JSONField fulfillment_details
+        +ForeignKey location
+        +fulfill()
+        +cancel()
+        +expire()
+    }
+    
+    class AIRecommendation {
+        +UUID id
+        +ForeignKey customer
+        +JSONField content
+        +String recommendation_type
+        +Float confidence_score
+        +DateTime created_at
+        +is_relevant()
+        +mark_as_viewed()
+        +mark_as_accepted()
+    }
+    
+    class ChurnPrediction {
+        +UUID id
+        +ForeignKey customer
+        +Float churn_risk
+        +JSONField factors
+        +JSONField suggested_actions
+        +DateTime created_at
+        +generate_retention_campaign()
+        +update_prediction()
+    }
+    
+    class CustomerSegment {
+        +UUID id
+        +String name
+        +Text description
+        +JSONField criteria
+        +DateTime created_at
+        +DateTime updated_at
+        +get_customers()
+        +apply_promotion(promotion)
+    }
+    
+    class OpenAIService {
+        +String api_key
+        +String model
+        +String base_url
+        +generate_recommendation(customer_data)
+        +predict_churn(customer_activity)
+        +segment_customers(customers_data)
+        +analyze_feedback(feedback_text)
+        +generate_location_insights(location_data)
+    }
+
+    User "1" -- "1" Role: has
+    User "1" -- "1" Customer: can be
+    Tenant "1" -- "*" User: has
+    Tenant "1" -- "1" TenantSettings: has
+    Tenant "1" -- "*" LoyaltyProgram: configures
+    LoyaltyProgram "1" -- "*" Tier: contains
+    LoyaltyProgram "1" -- "*" Rule: defines
+    LoyaltyProgram "1" -- "*" Reward: offers
+    Tenant "1" -- "*" Customer: serves
+    Customer "1" -- "1" LoyaltyAccount: owns
+    LoyaltyAccount "1" -- "*" Transaction: records
+    Tier "1" -- "*" LoyaltyAccount: qualifies
+    Tenant "1" -- "*" Location: manages
+    Location "1" -- "*" CheckIn: receives
+    Customer "1" -- "*" CheckIn: performs
+    Rule "1" -- "*" Transaction: triggers
+    Customer "1" -- "*" Redemption: makes
+    Reward "1" -- "*" Redemption: used in
+    Location "1" -- "*" Redemption: occurs at
+    Customer "1" -- "*" AIRecommendation: receives
+    Customer "1" -- "1" ChurnPrediction: has
+    Customer "*" -- "*" CustomerSegment: belongs to

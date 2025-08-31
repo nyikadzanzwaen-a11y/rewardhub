@@ -1,0 +1,295 @@
+{% extends 'tenants/analytics/base.html' %}
+{% load humanize %}
+
+{% block title %}Transaction Analytics - {{ tenant.business_name }}{% endblock %}
+
+{% block analytics_content %}
+<div class="bg-white rounded-lg shadow p-6 mb-6">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">Transaction Analytics</h2>
+        <div class="flex items-center space-x-4">
+            <span class="text-sm text-gray-600">Date Range:</span>
+            <div class="flex space-x-2">
+                <a href="?date_range=7d" class="px-3 py-1 text-sm rounded-full {% if selected_date_range == '7d' %}bg-blue-100 text-blue-700 font-medium{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Last 7 days</a>
+                <a href="?date_range=30d" class="px-3 py-1 text-sm rounded-full {% if selected_date_range == '30d' or not selected_date_range %}bg-blue-100 text-blue-700 font-medium{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Last 30 days</a>
+                <a href="?date_range=90d" class="px-3 py-1 text-sm rounded-full {% if selected_date_range == '90d' %}bg-blue-100 text-blue-700 font-medium{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Last 90 days</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-medium text-gray-700">Total Transactions</h3>
+                <div class="p-2 bg-blue-100 rounded-lg">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ total_transactions|intcomma }}</p>
+            <p class="text-sm text-gray-500 mt-2">
+                {{ start_date|date:"M j, Y" }} - {{ end_date|date:"M j, Y" }}
+            </p>
+        </div>
+
+        <div class="bg-white border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-medium text-gray-700">Points Earned</h3>
+                <div class="p-2 bg-green-100 rounded-lg">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ total_points_earned|intcomma }}</p>
+            <p class="text-sm text-gray-500 mt-2">
+                Average: {{ avg_points_per_transaction|floatformat:1|intcomma }} per transaction
+            </p>
+        </div>
+
+        <div class="bg-white border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-medium text-gray-700">Points Redeemed</h3>
+                <div class="p-2 bg-purple-100 rounded-lg">
+                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ total_points_redeemed|intcomma }}</p>
+            <p class="text-sm text-gray-500 mt-2">
+                Net: {{ total_points_earned|sub:total_points_redeemed|intcomma }} points
+            </p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Transaction Volume Chart -->
+        <div class="bg-white p-6 rounded-lg border shadow-sm">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Transaction Volume</h3>
+            <div class="h-80">
+                <canvas id="transactionVolumeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Points Activity Chart -->
+        <div class="bg-white p-6 rounded-lg border shadow-sm">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Points Activity</h3>
+            <div class="h-80">
+                <canvas id="pointsActivityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Transaction Types -->
+        <div class="bg-white p-6 rounded-lg border shadow-sm">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Transaction Types</h3>
+            <div class="space-y-4">
+                {% for type in transaction_types %}
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium text-gray-700">{{ type.transaction_type|title }}</span>
+                        <span class="font-medium text-gray-900">{{ type.count|intcomma }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-blue-600 h-2 rounded-full" style="width: {{ type.count|div:total_transactions|mul:100|floatformat:0 }}%"></div>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        {{ type.total_points|intcomma }} points
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Top Transactions -->
+        <div class="bg-white p-6 rounded-lg border shadow-sm">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Top Transactions</h3>
+                <span class="text-sm text-gray-500">By points value</span>
+            </div>
+            <div class="space-y-4">
+                {% for transaction in top_transactions %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 rounded-full {% if transaction.points > 0 %}bg-green-100 text-green-600{% else %}bg-red-100 text-red-600{% endif %}">
+                            {% if transaction.points > 0 %}
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                            </svg>
+                            {% else %}
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                            </svg>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">
+                                {{ transaction.loyalty_account.customer.get_full_name }}
+                            </p>
+                            <p class="text-xs text-gray-500">
+                                {{ transaction.transaction_type|title }} • {{ transaction.created_at|timesince }} ago
+                            </p>
+                        </div>
+                    </div>
+                    <span class="text-sm font-medium {% if transaction.points > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                        {% if transaction.points > 0 %}+{% endif %}{{ transaction.points|intcomma }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Transaction Volume Chart
+const volumeCtx = document.getElementById('transactionVolumeChart').getContext('2d');
+const dateSeries = JSON.parse('{{ date_series|escapejs }}');
+const volumeData = JSON.parse('{{ volume_data|escapejs }}');
+
+new Chart(volumeCtx, {
+    type: 'bar',
+    data: {
+        labels: dateSeries,
+        datasets: [{
+            label: 'Transactions',
+            data: volumeData,
+            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+            borderColor: 'rgb(59, 130, 246)',
+            borderWidth: 1,
+            borderRadius: 4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                backgroundColor: 'white',
+                titleColor: '#1F2937',
+                bodyColor: '#4B5563',
+                borderColor: '#E5E7EB',
+                borderWidth: 1,
+                padding: 12,
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            }
+        },
+        scales: {
+            x: {
+                grid: {
+                    display: false
+                },
+                ticks: {
+                    color: '#6B7280',
+                    maxRotation: 45,
+                    minRotation: 45
+                }
+            },
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: '#F3F4F6'
+                },
+                ticks: {
+                    color: '#6B7280',
+                    precision: 0
+                }
+            }
+        }
+    }
+});
+
+// Points Activity Chart
+const pointsCtx = document.getElementById('pointsActivityChart').getContext('2d');
+const pointsEarnedData = JSON.parse('{{ points_earned_data|escapejs }}');
+const pointsRedeemedData = JSON.parse('{{ points_redeemed_data|escapejs }}');
+
+new Chart(pointsCtx, {
+    type: 'line',
+    data: {
+        labels: dateSeries,
+        datasets: [
+            {
+                label: 'Points Earned',
+                data: pointsEarnedData,
+                borderColor: 'rgb(16, 185, 129)',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.3,
+                fill: true,
+                borderWidth: 2
+            },
+            {
+                label: 'Points Redeemed',
+                data: pointsRedeemedData,
+                borderColor: 'rgb(139, 92, 246)',
+                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                tension: 0.3,
+                fill: true,
+                borderWidth: 2
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'top',
+                labels: {
+                    color: '#4B5563',
+                    usePointStyle: true,
+                    padding: 20
+                }
+            },
+            tooltip: {
+                backgroundColor: 'white',
+                titleColor: '#1F2937',
+                bodyColor: '#4B5563',
+                borderColor: '#E5E7EB',
+                borderWidth: 1,
+                padding: 12,
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            }
+        },
+        interaction: {
+            intersect: false,
+            mode: 'index'
+        },
+        scales: {
+            x: {
+                grid: {
+                    display: false
+                },
+                ticks: {
+                    color: '#6B7280',
+                    maxRotation: 45,
+                    minRotation: 45
+                }
+            },
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: '#F3F4F6'
+                },
+                ticks: {
+                    color: '#6B7280',
+                    callback: function(value) {
+                        return value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,30 @@
+# Django and Django-related packages
+Django==5.0.1
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+djangorestframework-simplejwt==5.3.1
+django-tailwind==3.7.0
+django-environ==0.11.2
+
+# Database
+mysqlclient==2.2.4
+dj-database-url==2.1.0
+
+# AI Integration
+requests==2.31.0
+openai==1.6.1
+
+# Geospatial features
+django-geojson==4.0.0
+django-leaflet==0.29.0
+
+# Utils
+python-dotenv==1.0.0
+pillow==10.1.0
+whitenoise==6.6.0
+gunicorn==21.2.0
+
+# Development tools
+black==23.12.1
+isort==5.13.2
+flake8==6.1.0

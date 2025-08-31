@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: loyalty-system
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn config.wsgi:application --log-file -"
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.10.6"
+      - key: DJANGO_SETTINGS_MODULE
+        value: "config.settings.development"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 4

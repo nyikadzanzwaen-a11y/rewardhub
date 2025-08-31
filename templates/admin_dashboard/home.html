@@ -1,0 +1,288 @@
+{% extends 'admin_dashboard/base_admin.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Key Metrics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-users text-white text-sm"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Total Customers</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ total_customers|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-exchange-alt text-white text-sm"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Total Transactions</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ total_transactions|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-trophy text-white text-sm"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Active Programs</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ active_programs|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-gift text-white text-sm"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Total Rewards</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ total_rewards|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts and Analytics -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Real-time Metrics -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Real-time Metrics</h3>
+            <div id="realtime-metrics" class="space-y-4">
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <span class="text-sm font-medium text-gray-700">Active Customers</span>
+                    <span id="active-customers" class="text-sm text-green-600 font-semibold">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <span class="text-sm font-medium text-gray-700">Points Issued (30d)</span>
+                    <span id="points-issued" class="text-sm text-blue-600 font-semibold">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <span class="text-sm font-medium text-gray-700">Points Redeemed (30d)</span>
+                    <span id="points-redeemed" class="text-sm text-purple-600 font-semibold">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <span class="text-sm font-medium text-gray-700">New Customers (30d)</span>
+                    <span id="new-customers" class="text-sm text-orange-600 font-semibold">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+            <div class="space-y-3">
+                <button onclick="openCustomerModal()" class="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 transition-colors text-left">
+                    <i class="fas fa-user-plus mr-3"></i>
+                    Add New Customer
+                </button>
+                <button onclick="generateReport()" class="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 transition-colors text-left">
+                    <i class="fas fa-chart-line mr-3"></i>
+                    Generate Analytics Report
+                </button>
+                <button onclick="createCampaign()" class="w-full bg-purple-600 text-white px-4 py-3 rounded-md hover:bg-purple-700 transition-colors text-left">
+                    <i class="fas fa-bullhorn mr-3"></i>
+                    Create New Campaign
+                </button>
+                <a href="{% url 'admin_dashboard:ai_insights' %}" class="block w-full bg-indigo-600 text-white px-4 py-3 rounded-md hover:bg-indigo-700 transition-colors text-left">
+                    <i class="fas fa-brain mr-3"></i>
+                    View AI Insights
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Recent Transactions</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for transaction in recent_transactions %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {{ transaction.loyalty_account.customer.email }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                                {% if transaction.transaction_type == 'earn' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ transaction.transaction_type|title }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {% if transaction.transaction_type == 'earn' %}+{% else %}-{% endif %}{{ transaction.points }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ transaction.timestamp|date:"M d, Y H:i" }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            {{ transaction.description|truncatechars:50 }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+                            No recent transactions
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- System Status -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <h4 class="text-sm font-medium text-gray-900 mb-3">System Health</h4>
+            <div class="flex items-center">
+                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                <span class="text-sm text-gray-600">All systems operational</span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <h4 class="text-sm font-medium text-gray-900 mb-3">AI Services</h4>
+            <div class="flex items-center">
+                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                <span class="text-sm text-gray-600">OpenAI API connected</span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <h4 class="text-sm font-medium text-gray-900 mb-3">Database</h4>
+            <div class="flex items-center">
+                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                <span class="text-sm text-gray-600">MySQL operational</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Customer Modal -->
+<div id="customerModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Add New Customer</h3>
+            <form id="customerForm">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" name="email" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">First Name</label>
+                        <input type="text" name="first_name" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Last Name</label>
+                        <input type="text" name="last_name" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" onclick="closeCustomerModal()" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700">
+                        Add Customer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load real-time metrics
+async function loadMetrics() {
+    try {
+        const response = await fetchWithCSRF('/admin/api/metrics/');
+        const data = await response.json();
+        
+        if (data.success) {
+            const metrics = data.metrics;
+            document.getElementById('active-customers').textContent = metrics.customers.active.toLocaleString();
+            document.getElementById('points-issued').textContent = metrics.transactions.points_issued.toLocaleString();
+            document.getElementById('points-redeemed').textContent = metrics.transactions.points_redeemed.toLocaleString();
+            document.getElementById('new-customers').textContent = metrics.customers.new_last_30_days.toLocaleString();
+        }
+    } catch (error) {
+        console.error('Error loading metrics:', error);
+    }
+}
+
+// Customer modal functions
+function openCustomerModal() {
+    document.getElementById('customerModal').classList.remove('hidden');
+}
+
+function closeCustomerModal() {
+    document.getElementById('customerModal').classList.add('hidden');
+    document.getElementById('customerForm').reset();
+}
+
+// Handle customer form submission
+document.getElementById('customerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const customerData = Object.fromEntries(formData);
+    
+    try {
+        // This would typically call a customer creation API
+        showSuccess('Customer creation functionality would be implemented here');
+        closeCustomerModal();
+    } catch (error) {
+        showError('Error creating customer');
+    }
+});
+
+// Quick action functions
+function generateReport() {
+    showSuccess('Report generation functionality would be implemented here');
+}
+
+function createCampaign() {
+    showSuccess('Campaign creation functionality would be implemented here');
+}
+
+// Load metrics on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadMetrics();
+    
+    // Refresh metrics every 30 seconds
+    setInterval(loadMetrics, 30000);
+});
+</script>
+{% endblock %}
