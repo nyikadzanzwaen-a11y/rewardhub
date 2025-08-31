@@ -5,7 +5,7 @@ import os
 # Security
 DEBUG = True
 SECRET_KEY = 'django-insecure-development-key-12345-change-this-in-production'
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*.onrender.com']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*.onrender.com', 'rewardhub-enhq.onrender.com']
 
 # Database configuration
 DATABASES = {
